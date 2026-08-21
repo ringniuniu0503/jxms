@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>常見問題維護 - 項目管理 邏輯 Demo</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+    background: #eeedec;
+    color: #333;
+  }
+  .app { max-width: 1440px; margin: 0 auto; }
+  .topbar {
+    height: 60px;
+    background: linear-gradient(95deg, #c1893a 0%, #d4af65 100%);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; color: #fff; font-size: 16px;
+  }
+  .topbar .crumb { display:flex; align-items:center; gap:6px; font-size:16px; }
+  .topbar .crumb b { font-weight:500; }
+  .topbar .crumb span { opacity:.8; }
+
+  .body { display:flex; }
+  .sidebar {
+    width: 240px; background:#fff; border-right:1px solid #eeedec; min-height: calc(100vh - 60px);
+    padding-top: 8px;
+  }
+  .sidebar .group-label { color:#aaa; font-size:12px; padding:18px 16px; }
+  .sidebar .item { display:flex; align-items:center; gap:12px; padding:16px 12px 16px 10px; font-size:16px; border-left:6px solid transparent; }
+  .sidebar .item.active { background:#eeedec; border-left-color:#c1893a; color:#c1893a; font-weight:600; }
+  .sidebar .item:not(.active) { color:#666; font-weight:600; }
+
+  .main { flex:1; padding: 0; }
+  .nav-tabs { display:flex; gap:48px; background:#fff; border-bottom:1px solid #eaeaea; padding:0 48px; height:60px; align-items:flex-end; }
+  .nav-tabs .page-title { font-size:18px; font-weight:600; padding-bottom:14px; }
+  .nav-tabs .tab { font-size:16px; font-weight:600; color:#666; padding-bottom:14px; cursor:pointer; border-bottom:4px solid transparent; }
+  .nav-tabs .tab.active { color:#c1893a; border-bottom-color:#c1893a; }
+
+  .content { padding: 24px; display:flex; flex-direction:column; gap:24px; }
+
+  .search-board { background:#fff; border-radius:4px; padding:24px; display:flex; gap:24px; align-items:center; position:relative; }
+  .field { flex:1; display:flex; flex-direction:column; gap:6px; }
+  .field label { font-size:14px; color:#a45f2c; }
+  .field .box {
+    border:1px solid #dfdcd7; border-radius:2px; padding:10px 12px 12px 16px;
+    font-size:16px; display:flex; justify-content:space-between; align-items:center;
+    background:#fff;
+  }
+  .field .box.field-disabled { background:#f8f8f8; }
+  .field select:disabled, .field input:disabled { background:transparent; color:#ccc; }
+  .field select { border:none; font-size:16px; width:100%; background:transparent; color:#333; outline:none; }
+  .field input { border:none; font-size:16px; width:100%; outline:none; color:#333; }
+  .search-btns { display:flex; gap:24px; }
+  .btn {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:16px; font-weight:500; padding:12px 20px; border-radius:4px; cursor:pointer;
+    border:1px solid transparent; background:none; text-transform: uppercase;
+  }
+  .btn.text { color:#c1893a; }
+  .btn.primary { background:#c1893a; color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.16); }
+  .btn.white { background:#fff; color:#333; box-shadow:0 1px 4px rgba(0,0,0,.16); }
+  .btn.outline { border:1px solid #c1893a; color:#c1893a; background:#fff; }
+  .btn.plain { color:#c1893a; background:none; border:none; }
+  .btn.disabled { opacity:.36; cursor:not-allowed; pointer-events:none; }
+  .btn:hover:not(.disabled) { filter:brightness(0.96); }
+
+  .board { background:#fff; border-radius:4px; overflow:hidden; }
+  .btn-bar { display:flex; gap:8px; padding:12px; box-shadow: inset 0 -2px 0 0 #eaeaea; }
+  .board-head { display:flex; align-items:center; gap:24px; padding:12px 16px 14px 16px; box-shadow: inset 0 -2px 0 0 #eaeaea; }
+  .board-head .title { flex:1; font-size:14px; font-weight:600; }
+
+  .cat-row { display:flex; align-items:center; padding:16px; border-bottom:1px solid #e0e0e0; gap:16px; }
+  .cat-row .idx { width:28px; text-align:center; font-size:14px; }
+  .cat-row .name { flex:1; }
+  .cat-row .name .zh { font-weight:500; font-size:14px; }
+  .cat-row .name .en { font-size:14px; color:#666; }
+  .cat-row .count { color:#999; font-size:14px; width:80px; text-align:right; }
+  .icon-btn {
+    width:44px; height:44px; border-radius:44px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; color:#999; user-select:none; flex-shrink:0;
+  }
+  .icon-btn:hover:not(.disabled) { background:#f4f0ea; }
+  .icon-btn.disabled { opacity:.36; cursor:not-allowed; }
+
+  .item-row { display:flex; align-items:center; padding:16px; border-bottom:1px solid #e0e0e0; gap:16px; }
+  .item-row .space { width:60px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#756879; }
+  .item-row .idx { width:28px; text-align:center; font-size:14px; color:#333; flex-shrink:0; }
+  .item-row .col { flex:1; font-size:14px; line-height:1.5; min-width:0; }
+  .item-row .col .en { color:#666; }
+  .item-row .actions { display:flex; gap:8px; flex-shrink:0; }
+  mark { background:#fce9bd; color:#a45f2c; border-radius:2px; padding:0 2px; }
+
+  .empty-note { padding: 40px; text-align:center; color:#999; font-size:15px; }
+
+  .controls { padding: 0 24px 40px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; font-size:13px; color:#666; }
+  .controls button { font-size:13px; padding:8px 14px; border:1px solid #9e9e9e; background:#fff; border-radius:4px; cursor:pointer; }
+  .controls button:hover { background:#f4f4f4; }
+  .rule-box {
+    margin: 0 24px 24px; background:#fce9bd; border-radius:6px; padding:16px 20px; font-size:13px; color:#5c4b1f; line-height:1.6;
+  }
+
+  .tooltip-wrap { position:relative; display:inline-flex; }
+  .tooltip-wrap .tip {
+    position:absolute; top:calc(100% + 4px); left:50%; transform:translateX(-50%);
+    background:#666; color:#fff; font-size:14px; white-space:nowrap;
+    padding:6px 8px; border-radius:4px; display:none; z-index:10;
+  }
+  .tooltip-wrap:hover .tip { display:block; }
+
+  .sort-note {
+    position:absolute; top:calc(100% + 12px); right:24px;
+    background:#fce9bd; border-radius:6px; padding:16px 20px; font-size:14px; color:#333;
+    box-shadow: inset 2px -2px 0 0 #d4c49f; z-index:5;
+  }
+  .sort-note::before {
+    content:''; position:absolute; top:-10px; right:32px;
+    width:0; height:0; border-left:8px solid transparent; border-right:8px solid transparent; border-bottom:10px solid #fce9bd;
+  }
+
+  .item-row[draggable="true"] { cursor: grab; }
+  .item-row.dragging { opacity:.4; }
+  .item-row.drop-target { position:relative; }
+  .item-row .drop-line {
+    position:absolute; left:0; right:0; top:-1px; height:2px;
+    background:#c1893a; z-index:5; display:none;
+  }
+  .item-row .drop-dot {
+    position:absolute; top:-6px; width:12px; height:12px; border-radius:50%;
+    background:#c1893a; z-index:6; display:none;
+  }
+  .item-row .drop-dot.left { left:-6px; }
+  .item-row .drop-dot.right { right:-6px; }
+  .item-row.drop-target .drop-line,
+  .item-row.drop-target .drop-dot { display:block; }
+  .item-row.no-drop { cursor: not-allowed; }
+
+  .toast-alert {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+    display:flex; align-items:center; gap:8px; padding:12px 24px; border-radius:4px;
+    color:#fff; font-size:18px; z-index:100; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    display:none;
+  }
+  .toast-alert.show { display:flex; }
+  .toast-alert.success { background:#5ca460; }
+  .toast-alert.error { background:#c8565a; }
+
+  ::placeholder { color:#cccccc; opacity:1; }
+  select { color:#333; }
+  select.placeholder-color { color:#cccccc; }
+
+  .modal-overlay {
+    position: fixed; inset:0; background: rgba(51,51,51,.6);
+    display:none; align-items:center; justify-content:center; z-index:200;
+  }
+  .modal-overlay.show { display:flex; }
+  .modal-box {
+    background:#fff; border:1px solid #c1893a; border-radius:4px; width:400px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.16); overflow:hidden;
+  }
+  .modal-box .body { padding:24px; font-size:16px; color:#333; line-height:1.5; text-align:left; white-space:normal; word-break:break-word; unicode-bidi:plaintext; }
+  .modal-box .footer { background:#fafafa; height:80px; position:relative; }
+  .modal-box .footer .btns { position:absolute; bottom:16px; right:24px; display:flex; gap:8px; }
+  .modal-box .btn-grey { color:#756879; background:none; border:none; }
+  .modal-box .btn-danger { background:#c8565a; color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.16); }
+
+  .add-overlay {
+    position: fixed; inset:0; background: rgba(51,51,51,.6);
+    display:none; align-items:center; justify-content:center; z-index:150;
+  }
+  .add-overlay.show { display:flex; }
+  .add-box {
+    background:#fff; border:1px solid #c1893a; border-radius:4px; width:1000px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.16); overflow:hidden;
+  }
+  .add-header { display:flex; align-items:center; gap:16px; padding:16px 16px 16px 24px; border-bottom:1px solid #eee; }
+  .add-header .title { flex:1; font-size:20px; font-weight:700; color:#333; }
+  .add-header .close { cursor:pointer; color:#666; opacity:.8; }
+  .add-body { padding:24px; display:flex; flex-direction:column; gap:24px; }
+  .add-row { display:flex; gap:24px; }
+  .add-field { flex:1; display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .add-field .flabel { font-size:14px; color:#a45f2c; }
+  .add-field .fbox {
+    border:1px solid #dfdcd7; border-radius:2px; padding:10px 12px 12px 16px;
+    font-size:16px; background:#fff; display:flex; align-items:center; justify-content:space-between;
+  }
+  .add-field .fbox.field-disabled { background:#f8f8f8; }
+  .add-field select { border:none; font-size:16px; width:100%; background:transparent; outline:none; color:#333; }
+  .add-field select:disabled { color:#ccc; }
+  .add-field.error .fbox, .add-field.error textarea { border-color:#c8565a !important; }
+  .add-field .ferr { color:#c8565a; font-size:12px; display:none; }
+  .add-field.error .ferr { display:block; }
+  .add-field textarea {
+    width:100%; box-sizing:border-box;
+    border:1px solid #dfdcd7; border-radius:2px; font-size:16px; padding:11px 15px; resize:vertical;
+    font-family:inherit; color:#333; outline:none;
+  }
+  .add-field .charcount { align-self:flex-end; font-size:12px; color:#aaa; margin-top:-28px; margin-right:12px; pointer-events:none; }
+  .editor-wrap { border:1px solid #dfdcd7; border-radius:2px; overflow:hidden; }
+  .editor-wrap textarea { border:none; border-radius:0; }
+  .editor-toolbar { display:flex; gap:4px; padding:8px; border-bottom:1px solid #dfdcd7; background:#fff; }
+  .editor-toolbar span { width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:13px; color:#333; border-radius:4px; }
+  .add-footer { background:#fafafa; height:80px; position:relative; }
+  .add-footer .btns { position:absolute; bottom:16px; right:24px; display:flex; gap:8px; }
+  .note-bubble {
+    position:absolute; top:100%; margin-top:8px; left:0;
+    background:#fce9bd; border-radius:6px; padding:12px 16px; font-size:14px; color:#333;
+    box-shadow: inset 2px -2px 0 0 #d4c49f; white-space:nowrap; display:none; z-index:5;
+  }
+  .add-field:hover .note-bubble.show-on-hover { display:block; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="crumb">Portal <span>&gt;</span> JXMS 後台管理系統 <span>&gt;</span> <b>常見問題維護</b></div>
+    <div style="opacity:.8">Alice Chen 陳艾莉</div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <div class="group-label">JXMS 後台管理系統</div>
+      <div class="item active">常見問題維護</div>
+      <div class="item">員工打卡資料管理</div>
+    </div>
+
+    <div class="main">
+      <div class="nav-tabs">
+        <div class="page-title">常見問題維護</div>
+        <div class="tab active">項目管理</div>
+        <div class="tab">類別管理</div>
+      </div>
+
+      <div class="content">
+        <div class="search-board">
+          <div class="field">
+            <label>類別</label>
+            <div class="box" id="catBox"><select id="catSelect"><option value="">請選擇</option></select></div>
+          </div>
+          <div class="field">
+            <label>項目/內文關鍵字搜尋</label>
+            <div class="box" id="kwBox"><input id="kwInput" placeholder="請輸入" /></div>
+          </div>
+          <div class="search-btns">
+            <button class="btn text" id="clearBtn" onclick="clearAll()">清除全部</button>
+            <button class="btn primary" id="searchBtn" onclick="doSearch()">搜尋</button>
+          </div>
+          <div class="sort-note" id="sortNote" style="display:none">在排序模式下，篩選欄位無法操作</div>
+        </div>
+
+        <div class="toast-alert" id="toastAlert"></div>
+
+<div class="modal-overlay" id="discardModal">
+  <div class="modal-box">
+    <div class="body">您編輯的項目排序尚未儲存，若離開將放棄您當前的編輯內容</div>
+    <div class="footer">
+      <div class="btns">
+        <button class="btn btn-grey" onclick="closeDiscardModal()">返回編輯</button>
+        <button class="btn btn-danger" onclick="confirmDiscard()">捨棄</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="add-overlay" id="addOverlay">
+  <div class="add-box">
+    <div class="add-header">
+      <div class="title">新增項目</div>
+      <div class="close" onclick="tryCloseAddDialog()">✕</div>
+    </div>
+    <div class="add-body">
+      <div class="add-row">
+        <div class="add-field" id="f-cat">
+          <div class="flabel">類別*</div>
+          <div class="fbox">
+            <select id="addCatSelect" onchange="onAddCatChange()"><option value="">請選擇</option></select>
+          </div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+        <div class="add-field" id="f-no" style="position:relative">
+          <div class="flabel">編號*</div>
+          <div class="fbox field-disabled" id="noBox">
+            <select id="addNoSelect" disabled><option>請先選擇類別</option></select>
+          </div>
+          <div class="ferr">此欄位不可為空白</div>
+          <div class="note-bubble show-on-hover" id="noNote">尚未選擇類別之前，編號為 disabled 狀態</div>
+        </div>
+      </div>
+      <div class="add-row">
+        <div class="add-field" id="f-titlezh">
+          <div class="flabel">中文標題*</div>
+          <textarea rows="2" oninput="updateCount(this,'c-titlezh',200)"></textarea>
+          <div class="charcount" id="c-titlezh">0/200</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+        <div class="add-field" id="f-titleen">
+          <div class="flabel">英文標題*</div>
+          <textarea rows="2" oninput="updateCount(this,'c-titleen',200)"></textarea>
+          <div class="charcount" id="c-titleen">0/200</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+      </div>
+      <div class="add-row">
+        <div class="add-field" id="f-contentzh">
+          <div class="flabel">中文內文*</div>
+          <div class="editor-wrap">
+            <div class="editor-toolbar"><span>B</span><span>U</span><span>S</span><span>🔗</span><span>≡</span></div>
+            <textarea rows="6" oninput="updateCount(this,'c-contentzh',2000)"></textarea>
+          </div>
+          <div class="charcount" id="c-contentzh">0/2000</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+        <div class="add-field" id="f-contenten">
+          <div class="flabel">英文內文*</div>
+          <div class="editor-wrap">
+            <div class="editor-toolbar"><span>B</span><span>U</span><span>S</span><span>🔗</span><span>≡</span></div>
+            <textarea rows="6" oninput="updateCount(this,'c-contenten',2000)"></textarea>
+          </div>
+          <div class="charcount" id="c-contenten">0/2000</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+      </div>
+    </div>
+    <div class="add-footer">
+      <div class="btns">
+        <button class="btn btn-grey" onclick="tryCloseAddDialog()">取消</button>
+        <button class="btn primary" onclick="submitAddDialog()">新增</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addLeaveConfirm" style="z-index:250">
+  <div class="modal-box">
+    <div class="body">您新增的項目尚未儲存，若離開將放棄您當前的編輯內容</div>
+    <div class="footer">
+      <div class="btns">
+        <button class="btn btn-grey" onclick="closeAddLeaveConfirm()">返回編輯</button>
+        <button class="btn btn-danger" onclick="discardAddDialog()">捨棄</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="add-overlay" id="editOverlay">
+  <div class="add-box">
+    <div class="add-header">
+      <div class="title">編輯項目</div>
+      <div class="close" onclick="tryCloseEditDialog()">✕</div>
+    </div>
+    <div class="add-body">
+      <div class="add-row">
+        <div class="add-field">
+          <div class="flabel">類別</div>
+          <div class="fbox field-disabled"><span id="editCatDisplay" style="color:#333"></span></div>
+        </div>
+        <div class="add-field">
+          <div class="flabel">編號</div>
+          <div class="fbox field-disabled"><span id="editNoDisplay" style="color:#333"></span></div>
+        </div>
+      </div>
+      <div class="add-row">
+        <div class="add-field" id="ef-titlezh">
+          <div class="flabel">中文標題*</div>
+          <textarea id="editTitleZh" rows="2" oninput="updateCount(this,'ec-titlezh',200)"></textarea>
+          <div class="charcount" id="ec-titlezh">0/200</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+        <div class="add-field" id="ef-titleen">
+          <div class="flabel">英文標題*</div>
+          <textarea id="editTitleEn" rows="2" oninput="updateCount(this,'ec-titleen',200)"></textarea>
+          <div class="charcount" id="ec-titleen">0/200</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+      </div>
+      <div class="add-row">
+        <div class="add-field" id="ef-contentzh">
+          <div class="flabel">中文內文*</div>
+          <div class="editor-wrap">
+            <div class="editor-toolbar"><span>B</span><span>U</span><span>S</span><span>🔗</span><span>≡</span></div>
+            <textarea id="editContentZh" rows="6" oninput="updateCount(this,'ec-contentzh',2000)"></textarea>
+          </div>
+          <div class="charcount" id="ec-contentzh">0/2000</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+        <div class="add-field" id="ef-contenten">
+          <div class="flabel">英文內文*</div>
+          <div class="editor-wrap">
+            <div class="editor-toolbar"><span>B</span><span>U</span><span>S</span><span>🔗</span><span>≡</span></div>
+            <textarea id="editContentEn" rows="6" oninput="updateCount(this,'ec-contenten',2000)"></textarea>
+          </div>
+          <div class="charcount" id="ec-contenten">0/2000</div>
+          <div class="ferr">此欄位不可為空白</div>
+        </div>
+      </div>
+    </div>
+    <div class="add-footer">
+      <div style="position:absolute; bottom:16px; left:24px;">
+        <div class="icon-btn" style="color:#c8565a" onclick="openDeleteFromEdit()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
+      </div>
+      <div class="btns">
+        <button class="btn btn-grey" onclick="tryCloseEditDialog()">取消</button>
+        <button class="btn primary" onclick="submitEditDialog()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editLeaveConfirm" style="z-index:250">
+  <div class="modal-box">
+    <div class="body">您編輯的項目尚未儲存，若離開將放棄您當前的編輯內容</div>
+    <div class="footer">
+      <div class="btns">
+        <button class="btn btn-grey" onclick="closeEditLeaveConfirm()">返回編輯</button>
+        <button class="btn btn-danger" onclick="discardEditDialog()">捨棄</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteOverlay">
+  <div class="modal-box" style="width:400px">
+    <div class="add-header" style="padding:16px 16px 16px 24px;">
+      <div class="title" style="font-size:20px;">刪除項目</div>
+      <div class="close" onclick="closeDeleteDialog()">✕</div>
+    </div>
+    <div class="body" id="deleteBodyText"></div>
+    <div class="footer">
+      <div class="btns">
+        <button class="btn btn-grey" onclick="closeDeleteDialog()">取消</button>
+        <button class="btn btn-danger" onclick="confirmDeleteItem()">刪除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+        <div class="board">
+          <div class="btn-bar" id="btnBar"></div>
+          <div class="board-head">
+            <div class="title" id="boardTitle">類別</div>
+            <button class="btn outline" id="expandBtn" onclick="toggleGlobal()"></button>
+          </div>
+          <div id="listArea"></div>
+        </div>
+      </div>
+
+      <div class="rule-box" id="ruleBox"></div>
+
+      <div class="controls">
+        <span>模擬控制:</span>
+        <button onclick="preset('default')">預設畫面(全部展開)</button>
+        <button onclick="preset('categoryOnly')">只選類別</button>
+        <button onclick="preset('catKeywordHit')">類別+關鍵字(有結果)</button>
+        <button onclick="preset('keywordMulti')">只打關鍵字(跨類別命中)</button>
+        <button onclick="preset('catKeywordMiss')">類別+關鍵字(無交集)</button>
+        <button onclick="preset('keywordMiss')">只打關鍵字(全類別皆無結果)</button>
+        <button onclick="simulateSaveFail()">模擬：下一次儲存/新增動作會失敗</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- inline SVG icons (no external font dependency) ----------
+const ICONS = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  sort: '<polyline points="7 9 12 4 17 9"/><polyline points="7 15 12 20 17 15"/>',
+  angleDown: '<polyline points="6 9 12 15 18 9"/>',
+  angleUp: '<polyline points="6 15 12 9 18 15"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  trash: '<polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>',
+  expand: '<polyline points="7 8 12 3 17 8"/><polyline points="7 16 12 21 17 16"/>',
+  compress: '<polyline points="7 3 12 8 17 3"/><polyline points="7 21 12 16 17 21"/>',
+  grip: '<line x1="4" y1="9" x2="20" y2="9"/><line x1="4" y1="15" x2="20" y2="15"/>',
+};
+function icon(name, size) {
+  size = size || 20;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+}
+
+const CATEGORIES = [
+  { id: 'attendance', zh: '出勤管理', en: 'Attendance Management', items: [
+    { zh: '遲到超過幾分鐘會被扣薪？', en: 'How many minutes late results in a pay deduction?', czh: '遲到超過十五分鐘將依規定扣除當日薪資', cen: 'Pay is deducted for tardiness exceeding 15 minutes as per regulations' },
+    { zh: '如何申請在家遠端工作？', en: 'How to apply for remote work from home?', czh: '請至人事系統填寫遠端工作申請表並經主管核准', cen: 'Submit a remote work request form in the HR system with manager approval' },
+    { zh: '特休假未休完可以折算現金嗎？', en: 'Can unused annual leave be converted to cash?', czh: '年度結束前未休完之特休假可依法折算為現金發放', cen: 'Unused annual leave can be legally converted to cash before year end' },
+    { zh: '加班時數上限是多少小時？', en: 'What is the maximum overtime hours allowed?', czh: '每月加班時數上限為四十六小時且須經主管事先核准', cen: 'Monthly overtime is capped at 46 hours with prior manager approval' },
+  ]},
+  { id: 'benefits', zh: '福利制度', en: 'Benefits & Welfare', items: [
+    { zh: '公司提供哪些員工健康檢查項目？', en: 'What health check programs does the company offer?', czh: '每年提供一次免費全身健康檢查含基礎血液與影像項目', cen: 'Annual free comprehensive health check including blood tests and imaging exams' },
+    { zh: '員工旅遊補助金額為多少？', en: 'How much is the employee travel subsidy?', czh: '每人每年最高可申請新台幣一萬五千元旅遊補助', cen: 'Up to NT$15,000 travel subsidy per employee per year' },
+  ]},
+  { id: 'salary', zh: '薪資相關', en: 'Salary Related', items: [
+    { zh: '請問薪資何時發放？', en: 'When do we receive salary?', czh: '我們將於每個月的最後一個工作日發放薪資', cen: 'We pay employees on the last working day of each month' },
+  ]},
+  { id: 'performance', zh: '績效考核', en: 'Performance Review', items: [
+    { zh: '績效考核多久舉辦一次？', en: 'How often is the performance review held?', czh: '每半年進行一次績效考核，由主管與員工共同評估', cen: 'Performance reviews are held twice a year with manager and employee input' },
+  ]},
+  { id: 'onboarding', zh: '入職離職', en: 'Onboarding & Offboarding', items: [] },
+];
+
+let state = {
+  category: '',
+  keyword: '',
+  globalExpanded: {},
+  sortMode: false,
+};
+
+let dragState = { catId: null, fromIndex: null };
+let saveFailNext = false;
+
+function updateSelectColor(sel) {
+  sel.classList.toggle('placeholder-color', !sel.value);
+}
+function initSelectColors() {
+  document.querySelectorAll('select').forEach(sel => {
+    updateSelectColor(sel);
+    sel.addEventListener('change', () => updateSelectColor(sel));
+  });
+}
+
+function initSelect() {
+  const sel = document.getElementById('catSelect');
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.zh;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', () => { state.category = sel.value; render(); });
+  document.getElementById('kwInput').addEventListener('input', (e) => { state.keyword = e.target.value; });
+}
+
+function highlight(text, kw) {
+  if (!kw) return text;
+  const idx = text.indexOf(kw);
+  if (idx === -1) return text;
+  return text.slice(0, idx) + '<mark>' + kw + '</mark>' + text.slice(idx + kw.length);
+}
+
+function getVisibleCategories() {
+  let cats = CATEGORIES;
+  if (state.category) cats = cats.filter(c => c.id === state.category);
+  return cats.map(c => {
+    let items = c.items;
+    if (state.keyword) {
+      items = items.filter(i => i.zh.includes(state.keyword) || i.czh.includes(state.keyword));
+    }
+    return { ...c, visibleItems: items };
+  });
+}
+
+function renderBtnBar() {
+  const bar = document.getElementById('btnBar');
+  if (state.sortMode) {
+    bar.innerHTML = `
+      <button class="btn primary" onclick="saveSortMode()">儲存排序</button>
+      <button class="btn plain" onclick="cancelSortMode()">取消</button>
+    `;
+  } else {
+    bar.innerHTML = `
+      <button class="btn white" onclick="openAddDialog()">${icon('plus',16)}新增項目</button>
+      <button class="btn plain" onclick="enterSortMode()">編輯排序</button>
+    `;
+  }
+}
+
+function renderSearchDisabled() {
+  const catSel = document.getElementById('catSelect');
+  const kwInput = document.getElementById('kwInput');
+  const catBox = document.getElementById('catBox');
+  const kwBox = document.getElementById('kwBox');
+  const clearBtn = document.getElementById('clearBtn');
+  const searchBtn = document.getElementById('searchBtn');
+  const sortNote = document.getElementById('sortNote');
+
+  catSel.disabled = state.sortMode;
+  kwInput.disabled = state.sortMode;
+  catBox.classList.toggle('field-disabled', state.sortMode);
+  kwBox.classList.toggle('field-disabled', state.sortMode);
+  clearBtn.classList.toggle('disabled', state.sortMode);
+  searchBtn.classList.toggle('disabled', state.sortMode);
+  sortNote.style.display = state.sortMode ? 'block' : 'none';
+}
+
+function render() {
+  renderBtnBar();
+  renderSearchDisabled();
+
+  const cats = getVisibleCategories();
+  const anyItemsAnywhere = cats.some(c => c.visibleItems.length > 0);
+  const totalCount = cats.reduce((s, c) => s + c.visibleItems.length, 0);
+  const catCount = cats.filter(c => c.visibleItems.length > 0).length;
+
+  const boardTitle = document.getElementById('boardTitle');
+  if (state.keyword) {
+    boardTitle.textContent = totalCount > 0
+      ? `共找到 ${totalCount} 筆結果，分布在 ${catCount} 個類別`
+      : (state.category ? `${CATEGORIES.find(c=>c.id===state.category).zh}` : '類別');
+  } else {
+    boardTitle.textContent = state.category ? CATEGORIES.find(c=>c.id===state.category).zh : '類別';
+  }
+
+  const expandBtn = document.getElementById('expandBtn');
+  if (!anyItemsAnywhere) {
+    expandBtn.classList.add('disabled');
+  } else {
+    expandBtn.classList.remove('disabled');
+  }
+  const expandableCats = cats.filter(c => c.visibleItems.length > 0);
+  const anyExpanded = expandableCats.some(c => state.globalExpanded[c.id] !== false);
+  expandBtn.innerHTML = anyExpanded ? '全部收合' : '全部展開';
+
+  const listArea = document.getElementById('listArea');
+  listArea.innerHTML = '';
+
+  if (cats.length === 0) {
+    listArea.innerHTML = '<div class="empty-note">此類別下沒有項目，請新增項目</div>';
+    return;
+  }
+
+  cats.forEach((c, ci) => {
+    const hasItems = c.visibleItems.length > 0;
+    const expanded = hasItems ? (state.globalExpanded[c.id] !== false) : false;
+
+    const row = document.createElement('div');
+    row.className = 'cat-row';
+    row.innerHTML = `
+      <div class="idx">${CATEGORIES.findIndex(x=>x.id===c.id)+1}</div>
+      <div class="name"><div class="zh">${c.zh}</div><div class="en">${c.en}</div></div>
+      <div class="count">共 ${c.visibleItems.length} 題</div>
+      <div class="icon-btn ${hasItems ? '' : 'disabled'}" onclick="toggleCat('${c.id}')">${icon(expanded ? 'angleUp' : 'angleDown')}</div>
+    `;
+    listArea.appendChild(row);
+
+    if (hasItems && expanded) {
+      c.visibleItems.forEach((it, i) => {
+        const ir = document.createElement('div');
+        ir.className = 'item-row';
+        ir.dataset.catId = c.id;
+        ir.dataset.index = i;
+        if (state.sortMode) ir.setAttribute('draggable', 'true');
+        ir.innerHTML = `
+          <div class="drop-line"></div>
+          <div class="drop-dot left"></div>
+          <div class="drop-dot right"></div>
+          <div class="space">${state.sortMode ? icon('grip', 18) : ''}</div>
+          <div class="idx">${i+1}</div>
+          <div class="col">
+            <div>${highlight(it.zh, state.keyword)}</div>
+            <div class="en">${it.en}</div>
+          </div>
+          <div class="col">
+            <div>${highlight(it.czh, state.keyword)}</div>
+            <div class="en">${it.cen}</div>
+          </div>
+          <div class="actions">
+            <div class="tooltip-wrap"><div class="icon-btn" style="color:#c8565a" onclick="openDeleteDialog('${c.id}', ${i})">${icon('trash')}</div><div class="tip">刪除</div></div>
+            <div class="tooltip-wrap"><div class="icon-btn" style="color:#c1893a" onclick="openEditDialog('${c.id}', ${i})">${icon('pencil')}</div><div class="tip">編輯</div></div>
+          </div>
+        `;
+        if (state.sortMode) {
+          ir.addEventListener('dragstart', onDragStart);
+          ir.addEventListener('dragover', onDragOver);
+          ir.addEventListener('dragenter', onDragEnter);
+          ir.addEventListener('dragleave', onDragLeave);
+          ir.addEventListener('drop', onDrop);
+          ir.addEventListener('dragend', onDragEnd);
+        }
+        listArea.appendChild(ir);
+      });
+    }
+  });
+
+  updateRuleBox(anyItemsAnywhere, cats);
+}
+
+function updateRuleBox(anyItemsAnywhere, cats) {
+  const box = document.getElementById('ruleBox');
+  let lines = [];
+  lines.push('「編輯排序」按鈕：不管目前篩選/搜尋結果為何，永遠可以點擊；點擊後會捨棄目前的搜尋條件與結果，重置為全部類別展開的預設畫面，並進入編輯排序模式（篩選欄位、清除全部、搜尋皆 disabled，項目列出現拖曳把手）');
+  lines.push('拖曳排序：只能在同一個類別內拖曳，跨類別拖曳時放開滑鼠會直接彈回原位，不會真的被移動（可以實際拖拖看下面的項目列）');
+  lines.push(anyItemsAnywhere
+    ? '「全部展開/收合」按鈕：至少有一個類別有項目 → 可點擊；文字依「是否有任一類別展開」決定'
+    : '「全部展開/收合」按鈕：所有顯示的類別皆為 0 題 → disabled');
+  cats.forEach(c => {
+    if (c.visibleItems.length === 0) {
+      lines.push(`類別「${c.zh}」共 0 題 → 該列展開/收合圖示 disabled`);
+    }
+  });
+  box.innerHTML = lines.map(l => '• ' + l).join('<br>');
+}
+
+// ---------- drag & drop (same-category reorder only) ----------
+function onDragStart(e) {
+  const row = e.currentTarget;
+  dragState.catId = row.dataset.catId;
+  dragState.fromIndex = parseInt(row.dataset.index, 10);
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+
+function onDragOver(e) {
+  const row = e.currentTarget;
+  if (row.dataset.catId === dragState.catId) {
+    e.preventDefault(); // allow drop only within same category
+    e.dataTransfer.dropEffect = 'move';
+  } else {
+    e.dataTransfer.dropEffect = 'none';
+  }
+}
+
+function onDragEnter(e) {
+  const row = e.currentTarget;
+  if (row.dataset.catId === dragState.catId) {
+    row.classList.add('drop-target');
+  } else {
+    row.classList.add('no-drop');
+  }
+}
+
+function onDragLeave(e) {
+  const row = e.currentTarget;
+  row.classList.remove('drop-target', 'no-drop');
+}
+
+function onDrop(e) {
+  const row = e.currentTarget;
+  row.classList.remove('drop-target', 'no-drop');
+  if (row.dataset.catId !== dragState.catId) {
+    // cross-category drop: blocked, snaps back (no reorder)
+    return;
+  }
+  e.preventDefault();
+  const toIndex = parseInt(row.dataset.index, 10);
+  const cat = CATEGORIES.find(c => c.id === dragState.catId);
+  if (!cat || dragState.fromIndex === null || toIndex === dragState.fromIndex) return;
+  const [moved] = cat.items.splice(dragState.fromIndex, 1);
+  cat.items.splice(toIndex, 0, moved);
+  render();
+}
+
+function onDragEnd(e) {
+  document.querySelectorAll('.item-row').forEach(r => r.classList.remove('dragging', 'drop-target', 'no-drop'));
+  dragState = { catId: null, fromIndex: null };
+}
+
+// ---------- Add Item dialog ----------
+function initAddCatSelect() {
+  const sel = document.getElementById('addCatSelect');
+  CATEGORIES.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.zh;
+    sel.appendChild(opt);
+  });
+}
+
+function openAddDialog() {
+  document.getElementById('addOverlay').classList.add('show');
+}
+
+function onAddCatChange() {
+  const catId = document.getElementById('addCatSelect').value;
+  const noSel = document.getElementById('addNoSelect');
+  const noBox = document.getElementById('noBox');
+  noSel.innerHTML = '';
+  if (!catId) {
+    noSel.disabled = true;
+    noBox.classList.add('field-disabled');
+    noSel.innerHTML = '<option>請先選擇類別</option>';
+    return;
+  }
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const max = cat.items.length + 1;
+  for (let i = 1; i <= max; i++) {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = i;
+    noSel.appendChild(opt);
+  }
+  noSel.value = max; // default: append to end
+  noSel.disabled = false;
+  noBox.classList.remove('field-disabled');
+  updateSelectColor(noSel);
+}
+
+function updateCount(el, countId, max) {
+  document.getElementById(countId).textContent = `${el.value.length}/${max}`;
+}
+
+function addDialogHasContent() {
+  const cat = document.getElementById('addCatSelect').value;
+  const fields = ['f-titlezh','f-titleen','f-contentzh','f-contenten'].map(id => {
+    const wrap = document.getElementById(id);
+    return wrap.querySelector('textarea').value.trim();
+  });
+  return !!cat || fields.some(v => v.length > 0);
+}
+
+function tryCloseAddDialog() {
+  if (addDialogHasContent()) {
+    document.getElementById('addLeaveConfirm').classList.add('show');
+  } else {
+    closeAddDialogHard();
+  }
+}
+function closeAddLeaveConfirm() {
+  document.getElementById('addLeaveConfirm').classList.remove('show');
+}
+function discardAddDialog() {
+  document.getElementById('addLeaveConfirm').classList.remove('show');
+  closeAddDialogHard();
+}
+
+function closeAddDialogHard() {
+  document.getElementById('addOverlay').classList.remove('show');
+  // reset form
+  document.getElementById('addCatSelect').value = '';
+  onAddCatChange();
+  ['f-titlezh','f-titleen','f-contentzh','f-contenten','f-cat','f-no'].forEach(id => {
+    document.getElementById(id).classList.remove('error');
+  });
+  document.querySelectorAll('.add-body textarea').forEach(t => t.value = '');
+  updateCount(document.querySelector('#f-titlezh textarea'), 'c-titlezh', 200);
+  updateCount(document.querySelector('#f-titleen textarea'), 'c-titleen', 200);
+  updateCount(document.querySelector('#f-contentzh textarea'), 'c-contentzh', 2000);
+  updateCount(document.querySelector('#f-contenten textarea'), 'c-contenten', 2000);
+}
+
+function submitAddDialog() {
+  const catId = document.getElementById('addCatSelect').value;
+  const noVal = document.getElementById('addNoSelect').value;
+  const titleZh = document.querySelector('#f-titlezh textarea').value.trim();
+  const titleEn = document.querySelector('#f-titleen textarea').value.trim();
+  const contentZh = document.querySelector('#f-contentzh textarea').value.trim();
+  const contentEn = document.querySelector('#f-contenten textarea').value.trim();
+
+  let ok = true;
+  const checks = [
+    ['f-cat', !!catId],
+    ['f-no', !!catId && !!noVal],
+    ['f-titlezh', titleZh.length > 0],
+    ['f-titleen', titleEn.length > 0],
+    ['f-contentzh', contentZh.length > 0],
+    ['f-contenten', contentEn.length > 0],
+  ];
+  checks.forEach(([id, valid]) => {
+    document.getElementById(id).classList.toggle('error', !valid);
+    if (!valid) ok = false;
+  });
+  if (!ok) return;
+
+  if (saveFailNext) {
+    saveFailNext = false;
+    showToast('error', '新增失敗，請重新嘗試');
+    return;
+  }
+
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const insertAt = parseInt(noVal, 10) - 1;
+  cat.items.splice(insertAt, 0, { zh: titleZh, en: titleEn, czh: contentZh, cen: contentEn });
+
+  closeAddDialogHard();
+  state.globalExpanded[catId] = true;
+  render();
+  showToast('success', '新增成功');
+}
+
+// ---------- Edit Item dialog ----------
+let editTarget = { catId: null, index: null };
+
+function openEditDialog(catId, index) {
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const item = cat.items[index];
+  editTarget = { catId, index };
+  document.getElementById('editCatDisplay').textContent = `${cat.zh} ${cat.en}`;
+  document.getElementById('editNoDisplay').textContent = index + 1;
+  document.getElementById('editTitleZh').value = item.zh;
+  document.getElementById('editTitleEn').value = item.en;
+  document.getElementById('editContentZh').value = item.czh;
+  document.getElementById('editContentEn').value = item.cen;
+  updateCount(document.getElementById('editTitleZh'), 'ec-titlezh', 200);
+  updateCount(document.getElementById('editTitleEn'), 'ec-titleen', 200);
+  updateCount(document.getElementById('editContentZh'), 'ec-contentzh', 2000);
+  updateCount(document.getElementById('editContentEn'), 'ec-contenten', 2000);
+  ['ef-titlezh','ef-titleen','ef-contentzh','ef-contenten'].forEach(id => document.getElementById(id).classList.remove('error'));
+  document.getElementById('editOverlay').classList.add('show');
+}
+
+function editDialogChanged() {
+  const cat = CATEGORIES.find(c => c.id === editTarget.catId);
+  const item = cat.items[editTarget.index];
+  return document.getElementById('editTitleZh').value !== item.zh
+    || document.getElementById('editTitleEn').value !== item.en
+    || document.getElementById('editContentZh').value !== item.czh
+    || document.getElementById('editContentEn').value !== item.cen;
+}
+
+function tryCloseEditDialog() {
+  if (editDialogChanged()) {
+    document.getElementById('editLeaveConfirm').classList.add('show');
+  } else {
+    document.getElementById('editOverlay').classList.remove('show');
+  }
+}
+function closeEditLeaveConfirm() {
+  document.getElementById('editLeaveConfirm').classList.remove('show');
+}
+function discardEditDialog() {
+  document.getElementById('editLeaveConfirm').classList.remove('show');
+  document.getElementById('editOverlay').classList.remove('show');
+}
+
+function submitEditDialog() {
+  const titleZh = document.getElementById('editTitleZh').value.trim();
+  const titleEn = document.getElementById('editTitleEn').value.trim();
+  const contentZh = document.getElementById('editContentZh').value.trim();
+  const contentEn = document.getElementById('editContentEn').value.trim();
+
+  let ok = true;
+  const checks = [
+    ['ef-titlezh', titleZh.length > 0],
+    ['ef-titleen', titleEn.length > 0],
+    ['ef-contentzh', contentZh.length > 0],
+    ['ef-contenten', contentEn.length > 0],
+  ];
+  checks.forEach(([id, valid]) => {
+    document.getElementById(id).classList.toggle('error', !valid);
+    if (!valid) ok = false;
+  });
+  if (!ok) return;
+
+  if (saveFailNext) {
+    saveFailNext = false;
+    showToast('error', '更新失敗，請重新嘗試');
+    return;
+  }
+
+  const cat = CATEGORIES.find(c => c.id === editTarget.catId);
+  cat.items[editTarget.index] = { zh: titleZh, en: titleEn, czh: contentZh, cen: contentEn };
+  document.getElementById('editOverlay').classList.remove('show');
+  render();
+  showToast('success', '更新成功');
+}
+
+function openDeleteFromEdit() {
+  document.getElementById('editOverlay').classList.remove('show');
+  openDeleteDialog(editTarget.catId, editTarget.index);
+}
+
+// ---------- Delete Item dialog ----------
+let deleteTarget = { catId: null, index: null };
+
+function openDeleteDialog(catId, index) {
+  deleteTarget = { catId, index };
+  const cat = CATEGORIES.find(c => c.id === catId);
+  document.getElementById('deleteBodyText').textContent = `您確定要刪除「${cat.items[index].zh}」此項目嗎？`;
+  document.getElementById('deleteOverlay').classList.add('show');
+}
+function closeDeleteDialog() {
+  document.getElementById('deleteOverlay').classList.remove('show');
+}
+function confirmDeleteItem() {
+  if (saveFailNext) {
+    saveFailNext = false;
+    showToast('error', '刪除失敗，請重新嘗試');
+    return;
+  }
+  const cat = CATEGORIES.find(c => c.id === deleteTarget.catId);
+  cat.items.splice(deleteTarget.index, 1);
+  document.getElementById('deleteOverlay').classList.remove('show');
+  render();
+  showToast('success', '刪除成功');
+}
+
+function toggleCat(id) {
+  state.globalExpanded[id] = !(state.globalExpanded[id] !== false);
+  render();
+}
+
+function toggleGlobal() {
+  const cats = getVisibleCategories().filter(c => c.visibleItems.length > 0);
+  const anyExpanded = cats.some(c => state.globalExpanded[c.id] !== false);
+  const target = !anyExpanded;
+  cats.forEach(c => { state.globalExpanded[c.id] = target; });
+  render();
+}
+
+function doSearch() {
+  if (state.sortMode) return;
+  state.globalExpanded = {};
+  render();
+}
+
+function clearAll() {
+  if (state.sortMode) return;
+  state.category = '';
+  state.keyword = '';
+  document.getElementById('catSelect').value = '';
+  document.getElementById('kwInput').value = '';
+  state.globalExpanded = {};
+  render();
+}
+
+function enterSortMode() {
+  document.getElementById('catSelect').value = '';
+  document.getElementById('kwInput').value = '';
+  state.category = '';
+  state.keyword = '';
+  state.globalExpanded = {}; // default = all expanded
+  state.sortMode = true;
+  render();
+}
+
+function saveSortMode() {
+  if (saveFailNext) {
+    saveFailNext = false;
+    showToast('error', '錯誤，請重新嘗試');
+    return; // stay in sort mode so user can retry
+  }
+  state.sortMode = false;
+  render();
+  showToast('success', '儲存成功');
+}
+function cancelSortMode() {
+  document.getElementById('discardModal').classList.add('show');
+}
+function closeDiscardModal() {
+  document.getElementById('discardModal').classList.remove('show');
+}
+function confirmDiscard() {
+  document.getElementById('discardModal').classList.remove('show');
+  state.sortMode = false;
+  render();
+}
+
+function simulateSaveFail() {
+  saveFailNext = true;
+  showToast('error', '（模擬）下一次儲存排序或新增項目將會失敗');
+}
+
+function showToast(type, text) {
+  const el = document.getElementById('toastAlert');
+  el.className = 'toast-alert show ' + type;
+  el.innerHTML = (type === 'success' ? '✓ ' : '⚠ ') + text;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => { el.classList.remove('show'); }, 2200);
+}
+
+function preset(name) {
+  if (state.sortMode) return;
+  document.getElementById('kwInput').value = '';
+  document.getElementById('catSelect').value = '';
+  state.category = ''; state.keyword = ''; state.globalExpanded = {};
+
+  if (name === 'default') {
+  } else if (name === 'categoryOnly') {
+    state.category = 'salary';
+    document.getElementById('catSelect').value = 'salary';
+  } else if (name === 'catKeywordHit') {
+    state.category = 'benefits';
+    document.getElementById('catSelect').value = 'benefits';
+    state.keyword = '健康';
+    document.getElementById('kwInput').value = '健康';
+  } else if (name === 'keywordMulti') {
+    state.keyword = '哪些';
+    document.getElementById('kwInput').value = '哪些';
+  } else if (name === 'catKeywordMiss') {
+    state.category = 'benefits';
+    document.getElementById('catSelect').value = 'benefits';
+    state.keyword = '獎項';
+    document.getElementById('kwInput').value = '獎項';
+  } else if (name === 'keywordMiss') {
+    state.keyword = '獎項';
+    document.getElementById('kwInput').value = '獎項';
+  }
+  render();
+}
+
+initSelect();
+initAddCatSelect();
+initSelectColors();
+render();
+</script>
+
+</body>
+</html>
